@@ -492,8 +492,9 @@ import {
     readTextFile,
     writeTextFile,
     exists,
+    remove,
 } from '@tauri-apps/plugin-fs'
-import { appDataDir, join } from '@tauri-apps/api/path'
+import { appCacheDir, appDataDir, join } from '@tauri-apps/api/path'
 import { basename } from '@tauri-apps/api/path'
 import {
     ArrowLeft,
@@ -978,9 +979,9 @@ const activeDistInput = async () => {
     if (isTauri) {
         try {
             const res = await invoke('stop_server')
-            console.log('stopServer', res)
+            console.log('activeDistInput stopServer', res)
         } catch (error) {
-            console.error('Failed to stop server:', error)
+            console.error('activeDistInput Failed to stop server:', error)
         }
         loadHtml()
     } else {
@@ -997,14 +998,22 @@ const activeDistInput = async () => {
 const stopServer = async () => {
     if (isTauri) {
         try {
+            const cacheDir = await appCacheDir()
+            const cacheExist = await exists(cacheDir)
+            cacheExist && (await remove(cacheDir, { recursive: true }))
+        } catch (error) {
+            console.error('Failed to remove cache:', error)
+        }
+        try {
             const res = await invoke('stop_server')
-            console.log('stopServer', res)
+            console.log('stop server', res)
         } catch (error) {
             console.error('Failed to stop server:', error)
         }
-        store.actionSecond()
     }
 }
+// close preview window and stop server
+listen('stop_server', stopServer)
 
 // handle file change
 const handleFileChange = async (event: any) => {
@@ -1293,12 +1302,6 @@ const getInitializationScript = () => {
     }
     return initJsScript
 }
-
-// close preview window and stop server
-listen('stop_server', async () => {
-    const res = await invoke('stop_server')
-    console.log('stopServer----', res)
-})
 
 const preview = async (resize: boolean) => {
     if (isTauri) {
